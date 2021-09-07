@@ -11,5 +11,5 @@ type Column struct {
 	MinWidth        int
 	Width           int
 	Type            DataType
-	CalculateFunc   func(interface{}) string
+	CalculateFunc   func(interface{}, int) string
 }
