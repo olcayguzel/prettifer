@@ -16,14 +16,6 @@ func getUndelyingValue(v interface{}) reflect.Value {
 	return t
 }
 
-func getUndelyingType(v interface{}) reflect.Type {
-	t := reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t
-}
-
 func formatValue(v interface{}, c Column) string {
 	var result string
 	switch c.Type {
@@ -76,24 +68,6 @@ func getType(v interface{}, field string) DataType {
 	return dataType
 }
 
-func getDataType(t reflect.Type) DataType {
-	var dataType DataType = DT_STRUCT
-	switch t.Kind() {
-	case reflect.Complex128, reflect.Complex64:
-		dataType = DT_COMPLEX
-	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
-		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		dataType = DT_INTEGER
-	case reflect.Float32, reflect.Float64:
-		dataType = DT_FLOAT
-	case reflect.ValueOf(time.Time{}).Kind():
-		dataType = DT_DATETIME
-	case reflect.String:
-		dataType = DT_STRING
-	}
-	return dataType
-}
-
 func getDefaultDataFormat(t DataType) string {
 	format := ""
 	switch t {
@@ -121,13 +95,17 @@ func padding(value string, width int, alignment Alignment) string {
 	return result
 }
 
-func obtainStringValue(v interface{}, column Column) string {
+func obtainStringValue(v interface{}, column Column, i int) string {
 	value := "<NULL>"
 	if v != nil {
 		if column.CalculateFunc != nil {
-			value = column.CalculateFunc(v)
+			value = column.CalculateFunc(v, i)
 		} else {
 			value = formatValue(v, column)
+		}
+	} else {
+		if column.CalculateFunc != nil {
+			value = column.CalculateFunc(v, i)
 		}
 	}
 	return value
@@ -171,20 +149,12 @@ func getValue(value interface{}, fieldName string) interface{} {
 	var result interface{}
 	val := getUndelyingValue(value)
 	if val.Kind() == reflect.Struct {
-		val = val.FieldByName(fieldName)
-		result = val.Interface()
+		if len(fieldName) > 0 {
+			val = val.FieldByName(fieldName)
+			result = val.Interface()
+		}
 	}
 	return result
-}
-
-func detectDataType(v interface{}, f string) DataType {
-	var t DataType = DT_STRING
-	value := getUndelyingType(v)
-	field, ok := value.FieldByName(f)
-	if ok {
-		t = getDataType(field.Type)
-	}
-	return t
 }
 
 func stringSliceIndexOf(arr []string, s string) int {
